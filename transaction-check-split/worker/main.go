@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/vpavlin/temporal-experiment/config"
-	demo "github.com/vpavlin/temporal-experiment/transaction-in-activity"
+	demo "github.com/vpavlin/temporal-experiment/transaction-check-split"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -28,7 +28,8 @@ func main() {
 		log.Fatalln("Failed to instantiate blockchain wrapper: ", err)
 	}
 
-	w.RegisterActivity(b.Mint)
+	w.RegisterActivity(b.SendTx)
+	w.RegisterActivity(b.CheckTx)
 	w.RegisterWorkflow(demo.Workflow)
 
 	err = w.Run(worker.InterruptCh())

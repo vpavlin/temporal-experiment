@@ -2,13 +2,32 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 
 	"github.com/google/uuid"
-	demo "github.com/vpavlin/temporal-experiment/transaction-in-activity"
+	demo "github.com/vpavlin/temporal-experiment/generalize-transaction"
 	"go.temporal.io/sdk/client"
 )
+
+func NewMint(path string) (demo.Mint, error) {
+	var r demo.Mint
+
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return r, err
+	}
+
+	err = json.Unmarshal(data, &r)
+	if err != nil {
+		return r, err
+	}
+
+	return r, nil
+}
 
 func main() {
 	// The client is a heavyweight object that should be created once per process.
@@ -25,10 +44,13 @@ func main() {
 		TaskQueue: "COLLECTION_QUEUE",
 	}
 
-	params := demo.Mint{
-		Contract: "0xE0c3698dEe722e2FccD5cf4582007F700205De6e",
-		To:       "0x90e922b6D839335b5F12a1ECe75b5E04EbCC23Ef", //TODO: Fail for 0x93A36A162Ab993C678F8ff247aA90f003F96eAB1
-		Quantity: 1,
+	var params demo.Mint
+	if len(os.Args) < 2 {
+		log.Fatalln("Need to provide Mint Config file")
+	}
+	params, err = NewMint(os.Args[1])
+	if err != nil {
+		log.Fatalln("Failed to load mint config", os.Args[1])
 	}
 
 	we, err := c.ExecuteWorkflow(context.Background(), workflowOptions, demo.Workflow, params)

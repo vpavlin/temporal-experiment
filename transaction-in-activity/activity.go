@@ -60,7 +60,7 @@ func (b *Blockchain) Mint(ctx context.Context, params Mint) (MintResult, error) 
 		}
 	}
 
-	//
+	// Transaction exists, let's see if it succeeded and try to extract event logs
 	if len(result.Hash) != 0 {
 		logger.Info("Found existing TX, trying to get the receipt", "Hash", result.Hash, "Retries", result.Retries)
 
@@ -85,12 +85,9 @@ func (b *Blockchain) Mint(ctx context.Context, params Mint) (MintResult, error) 
 				}
 			}
 		}
-
-		if result.TokenId > 0 {
-			return result, nil
-		}
 	}
 
+	// If this is the first run, submit new TX. If it's over retry limit, resend the TX (maybe the gasPrice was too low...)
 	if result.Retries == 0 || result.Retries > 5 {
 		senderAddress := crypto.PubkeyToAddress(b.privateKey.PublicKey)
 
@@ -106,6 +103,7 @@ func (b *Blockchain) Mint(ctx context.Context, params Mint) (MintResult, error) 
 			return MintResult{}, err
 		}
 
+		// Get Nonce in case of first submit
 		if result.Nonce == 0 {
 			nonce, err := b.client.PendingNonceAt(ctx, senderAddress)
 			if err != nil {
@@ -119,6 +117,8 @@ func (b *Blockchain) Mint(ctx context.Context, params Mint) (MintResult, error) 
 		txOpts.GasPrice = gasPrice
 		txOpts.NoSend = true
 
+		// If this fails the TX is "wrong" and won't ever succeed
+		// There is a eth_Call hidden in Geth, so if this is failing, it means the TX would get reverted and there is no point in submitting it
 		tx, err := contract.Mint(txOpts, common.HexToAddress(params.To), big.NewInt(int64(params.Quantity)))
 		if err != nil {
 			logger.Error("Failed to produce transaction: ", err)
@@ -137,6 +137,7 @@ func (b *Blockchain) Mint(ctx context.Context, params Mint) (MintResult, error) 
 	result.Retries++
 	activity.RecordHeartbeat(ctx, result)
 
+	// Fail, so that Temporal retries
 	if !result.Success {
 		return MintResult{}, TxPending(fmt.Errorf("Transaction %s still in pending state", result.Hash))
 	}
