@@ -1,4 +1,4 @@
-package generalizetransaction
+package queryworkflowstate
 
 import (
 	"context"

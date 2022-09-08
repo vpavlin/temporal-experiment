@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/vpavlin/temporal-experiment/config"
-	demo "github.com/vpavlin/temporal-experiment/generalize-transaction"
+	demo "github.com/vpavlin/temporal-experiment/query-workflow-state"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )

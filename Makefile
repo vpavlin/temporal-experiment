@@ -6,3 +6,6 @@ worker:
 
 starter:
 	go run $(EXPERIMENT)/starter/main.go $(MINT_CONFIG)
+
+server:
+	go run $(EXPERIMENT)/server/main.go

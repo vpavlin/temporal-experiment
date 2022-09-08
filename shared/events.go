@@ -27,9 +27,10 @@ func ERC721WaitForTransferEvent(
 	fromFilter []common.Address,
 	toFilter []common.Address,
 	tokenIdFilter []*big.Int,
-) (Transfer, error) {
+	expectedEventCount int,
+) ([]Transfer, error) {
 	logger := activity.GetLogger(ctx)
-	var result Transfer
+	var result []Transfer
 	parsed, err := abi.JSON(strings.NewReader(bindings.ERC721ABI))
 	if err != nil {
 		return result, err
@@ -65,6 +66,8 @@ func ERC721WaitForTransferEvent(
 
 	logger.Info("Subscribed to events Transfer", "Contract", contractAddress)
 	defer sub.Unsubscribe()
+
+	cnt := 0
 	for {
 		select {
 		case log := <-logs:
@@ -75,11 +78,18 @@ func ERC721WaitForTransferEvent(
 			}
 			event.Raw = log
 
-			result.TxHash = log.TxHash.Hex()
-			result.From = event.From.Hex()
-			result.To = event.To.Hex()
-			result.TokenId = event.TokenId.Int64()
-			return result, nil
+			transfer := Transfer{
+				TxHash:  log.TxHash.Hex(),
+				From:    event.From.Hex(),
+				To:      event.To.Hex(),
+				TokenId: event.TokenId.Int64(),
+			}
+			result = append(result, transfer)
+			cnt++
+
+			if cnt == expectedEventCount {
+				return result, nil
+			}
 
 		case err := <-sub.Err():
 			return result, err
